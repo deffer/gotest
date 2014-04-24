@@ -17,25 +17,42 @@ type NumberedFileInfo interface {
 	NewNumber() int
 }
 
+type AnyFileInfo struct {
+	path string
+	name string
+	ext string
+	number int
+	newNumber int
+}
 
-var numberedFileRegex = regexp.MustCompile(`.*?\d+\.[^\.]+`)
+var numberedFileRegex = regexp.MustCompile(`(.*?)(\d+)\.([^\.]+)`)
 
-func withFilesInDir(folder string) (filesInDir, processed int) {
+func filterNumbered(filename string) (matches bool, fileinfo AnyFileInfo){
+	if numberedFileRegex.MatchString(filename){
+		matches = true
+		fileinfo = AnyFileInfo{name: filename}		
+	}else{
+		matches = false
+	}
+	return
+}
+
+func withFilesInDir(folder string, filterFunc func(string) (bool, AnyFileInfo)) (filesInDir, processed int) {
 	filesInDir = 0
 	processed = 0
 	var folderNames []string = make([]string, 0, 100)
 	var ignoredNames []string = make([]string, 0, 100)
+	var result []AnyFileInfo = make([]AnyFileInfo, 0, 100)
 	if dirlist,error := ioutil.ReadDir(folder); error == nil{
-		for i := 0; i<len(dirlist); i++ {
-			if a := dirlist[i]; !a.IsDir() {
+		for _, a:=range dirlist {
+			if !a.IsDir() {
 				filesInDir++
-				if (numberedFileRegex.MatchString(a.Name())){
-					processed++
-					fmt.Printf("Accepted %s\n",a.Name())
+				if matches, fileinfo := filterFunc(a.Name()); matches{
+					result = append(result, fileinfo)
+					fmt.Printf("Accepted %s\n",fileinfo.name)
 				}else{
 					ignoredNames = append(ignoredNames, a.Name())
 				}
-				
 			}else{
 				folderNames = append(folderNames, a.Name())
 			}
@@ -48,7 +65,7 @@ func withFilesInDir(folder string) (filesInDir, processed int) {
 	}else{		
 		fmt.Printf("Unable to read %s, error code %s", folder, error.Error())
 	}	
-	return filesInDir, processed
+	return filesInDir, len(result)
 	
 }
 
@@ -56,6 +73,6 @@ func withFilesInDir(folder string) (filesInDir, processed int) {
 
 func main() {
 	fmt.Printf("Starting...\n")	
-	withFilesInDir("c:/dev/docs/idcards")
+	withFilesInDir("c:/dev/docs/idcards", filterNumbered)
 	fmt.Printf("Finished!\n")
 }
