@@ -6,6 +6,7 @@ import (
 	"regexp"
 	_ "container/list"
 	"strings"
+	"log"
 )
 
 //import "os"
@@ -62,8 +63,9 @@ func withFilesInDir(folder string, filterFunc func(string) (bool, AnyFileInfo)) 
 			fmt.Printf("Skipped FOLDERS: \n    %s\n", strings.Join(folderNames, "\n    "))
 			fmt.Printf("Ignored files: \n    %s\n", strings.Join(ignoredNames, "\n    "))
 		}
-	}else{		
-		fmt.Printf("Unable to read %s, error code %s", folder, error.Error())
+	}else{	
+		log.Fatalf("Unable to read %s:\n %v \nDetails:\n %#v", folder, error, error)
+		//fmt.Printf("Unable to read %s, error code %s", folder, error.Error())
 	}	
 	return filesInDir, len(result)
 	
@@ -73,6 +75,6 @@ func withFilesInDir(folder string, filterFunc func(string) (bool, AnyFileInfo)) 
 
 func main() {
 	fmt.Printf("Starting...\n")	
-	withFilesInDir("c:/dev/docs/idcards", filterNumbered)
+	withFilesInDir("c:/dev/docs/idcards2", filterNumbered)
 	fmt.Printf("Finished!\n")
 }
