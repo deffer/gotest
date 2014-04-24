@@ -7,6 +7,7 @@ import (
 	_ "container/list"
 	"strings"
 	"log"
+	"runtime"
 )
 
 //import "os"
@@ -63,7 +64,9 @@ func withFilesInDir(folder string, filterFunc func(string) (bool, AnyFileInfo)) 
 			fmt.Printf("Skipped FOLDERS: \n    %s\n", strings.Join(folderNames, "\n    "))
 			fmt.Printf("Ignored files: \n    %s\n", strings.Join(ignoredNames, "\n    "))
 		}
-	}else{	
+	}else{
+		_, file, line, _ := runtime.Caller(1)
+		log.Printf("Error at %s: %d", file, line)
 		log.Fatalf("Unable to read %s:\n %v \nDetails:\n %#v", folder, error, error)
 		//fmt.Printf("Unable to read %s, error code %s", folder, error.Error())
 	}	
