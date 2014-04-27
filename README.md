@@ -10,11 +10,11 @@ Configue environment variables
 
 Path to go's binaries
 
-  set GOROOT=c:\apps\go
+    set GOROOT=c:\apps\go
 
 Path to default go's workspace
   
-  set GOPATH=c:\dev\go
+    set GOPATH=c:\dev\go
   
 The workspace should have following structure
 
