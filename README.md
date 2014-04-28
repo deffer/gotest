@@ -22,8 +22,14 @@ The workspace should have following structure
     [c:\dev\go\pck]
     [c:\dev\go\src]
      c:\dev\go\src\github.com\deffer\gotest\.git
+
+Althout it should be enough to set GOPATH, it may still complain about missing GOBIN.
+
+    set GOBIN=%GOPATH%/bin
   
 Running
 --------
+Compiling and installing as program.
 
+    go install github.com/deffer/gotest/hello.go
 
