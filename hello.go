@@ -8,6 +8,7 @@ import (
 	"strings"
 	"log"
 	"runtime"
+	"flag"
 )
 
 //import "os"
@@ -28,6 +29,15 @@ type AnyFileInfo struct {
 }
 
 var numberedFileRegex = regexp.MustCompile(`(.*?)(\d+)\.([^\.]+)`)
+var flagcmd string
+
+func init() {
+	flag.StringVar(&flagcmd, "cmd", "copy", "copy|renum")
+	flag.Bool("emulate", false, "Do not make any file system changes")
+	flag.Parse()
+	fmt.Printf("Command is %s, file is %s\n",flagcmd, flag.Args()[0])
+}
+
 
 func filterNumbered(filename string) (matches bool, fileinfo AnyFileInfo){
 	if numberedFileRegex.MatchString(filename){
@@ -74,7 +84,6 @@ func withFilesInDir(folder string, filterFunc func(string) (bool, AnyFileInfo)) 
 	
 }
 
-//func init() {} // only called once
 
 func main() {
 	fmt.Printf("Starting...\n")	
