@@ -31,5 +31,11 @@ Running
 --------
 Compiling and installing as program.
 
-    go install github.com/deffer/gotest/hello.go
+    go install github.com\deffer\gotest
+    
+This will install it as 'gotest' binary. It is also possible to cd into gotest folder and
+
+    go install hello.go
+    
+This will install it as hello binary.
 
