@@ -2,16 +2,18 @@ package main
 
 import (
 	"fmt"
+	"log"	
+	"os"
 	"io/ioutil"
-	"regexp"
-	_ "container/list"
-	"strings"
-	"log"
+	"bufio"
 	"runtime"
 	"flag"
+	"path/filepath"
+	"strings"
+	"regexp"
+	_ "container/list"	
 )
 
-//import "os"
 
 type NumberedFileInfo interface {
 	Name() string
@@ -47,6 +49,9 @@ func init() {
 	flag.Parse()
 	
 	fmt.Printf("Command is %s, args are %s\n", flagcmd, flag.Args())
+	if flag.NArg()>0{
+		source = flag.Args()[0]
+	}
 }
 
 
@@ -74,18 +79,38 @@ func filterOrdered(filename string)  (matches bool, fileinfo AnyFileInfo){
 	return
 }
 
-func withFilesInDir(folder string, filterFunc func(string) (bool, AnyFileInfo)) (filesInDir, processed int) {
-	filesInDir = 0
+func withFilesInList(listfile string, filterFunc func(string) (bool, AnyFileInfo)) (listedFiles []AnyFileInfo, processed int) {
+	file, _ := os.Open(listfile)
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		s := scanner.Text()
+		if !strings.HasPrefix(s, "#"){
+    		fmt.Println(s)
+    		if !filepath.IsAbs(s){
+    			abs := joinpath(listfile, s)
+    			fmt.Printf("    --> %s\n",abs)
+    		}
+
+    	}
+	}
+
+	if err := scanner.Err(); err != nil {
+    	log.Fatal(err)
+	}
+	return nil, 0
+}
+
+func withFilesInDir(folder string, filterFunc func(string) (bool, AnyFileInfo)) (filesInDir []AnyFileInfo, processed int) {	
 	processed = 0
 	var folderNames []string = make([]string, 0, 100)
 	var ignoredNames []string = make([]string, 0, 100)
 	var result []AnyFileInfo = make([]AnyFileInfo, 0, 100)
 	if dirlist,error := ioutil.ReadDir(folder); error == nil{
 		for _, a:=range dirlist {
-			if !a.IsDir() {
-				filesInDir++
+			if !a.IsDir() {				
 				if matches, fileinfo := filterFunc(a.Name()); matches{
 					result = append(result, fileinfo)
+					fileinfo.path = folder
 					fmt.Printf("Accepted %s\n",fileinfo.name)
 				}else{
 					ignoredNames = append(ignoredNames, a.Name())
@@ -105,13 +130,32 @@ func withFilesInDir(folder string, filterFunc func(string) (bool, AnyFileInfo)) 
 		log.Fatalf("Unable to read %s:\n %v \nDetails:\n %#v", folder, error, error)
 		//fmt.Printf("Unable to read %s, error code %s", folder, error.Error())
 	}	
-	return filesInDir, len(result)
+	return result, len(result)
 	
 }
 
 
+func joinpath(source, target string) string {
+    if filepath.IsAbs(target) {
+        return target
+    }
+    return filepath.Join(filepath.Dir(source), target)
+}
+
 func main() {
 	fmt.Printf("Starting...\n")	
-	withFilesInDir(source, filterNumbered)
+	finfo, err := os.Stat(source)
+	if err != nil { // no such file or dir
+		log.Fatalf("File or folder %s does not exist: %v", source, err)
+    	return
+	}
+
+	if finfo.IsDir() {
+    	withFilesInDir(source, filterNumbered)    	
+	} else {
+		fmt.Printf("Opening file %s, setting temp folder to %s\n", source, filepath.Dir(source))
+    	withFilesInList(source, filterOrdered)
+	}
+	
 	fmt.Printf("Finished!\n")
 }
