@@ -84,13 +84,11 @@ func withFilesInList(listfile string, filterFunc func(string) (bool, AnyFileInfo
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		s := scanner.Text()
-		if !strings.HasPrefix(s, "#"){
-    		fmt.Println(s)
+		if !strings.HasPrefix(s, "#"){    		
     		if !filepath.IsAbs(s){
-    			abs := joinpath(listfile, s)
-    			fmt.Printf("    --> %s\n",abs)
+    			s = joinpath(listfile, s)    			
     		}
-
+			fmt.Println(s)
     	}
 	}
 
