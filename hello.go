@@ -37,20 +37,40 @@ type AnyFileInfo struct {
 	stem string
 }
 
+// !17. track17.mp3
+// 07. Di-Rect - I Just Can't Stand.mp3
+// 07.Di-Rect - I Just Can't Stand.mp3
+// 10_Forever Gone.mp3
+// 10 Forever Gone.mp3
+// 11-Lady.mp3
+// 11 - Lady.mp3
+
+// Track  4.mp3
+// Track  5.mp3
+
+// Portal2-16-Hard_Sunshine.mp3
+// Portal2-17-I_Am_Different.mp3
+
+const FLAG_DEST_DEFAULT = "./"
 var numberedFileRegex = regexp.MustCompile(`(.*?)(\d+)\.([^\.]+)`)
-var flagcmd string
-var flagdest string
-var source string = "c:/dev/docs/idcards"
+var argfrom int // when ordering desctination files, start numbering them with this
+var argdest string
+var argsource string = "c:/dev/docs/idcards"
 
 func init() {
-	flag.StringVar(&flagcmd, "cmd", "copy", "copy|renum")
-	flag.StringVar(&flagdest, "dest", "./", "Destination foler")
+	
+	flag.IntVar(&argfrom, "from", 0, "Start enumeration from this number")
+	flag.StringVar(&flagdest, "dest", FLAG_DEST_DEFAULT, "Destination foler")
 	flag.Bool("emulate", false, "Do not make any file system changes")
 	flag.Parse()
 	
 	fmt.Printf("Command is %s, args are %s\n", flagcmd, flag.Args())
 	if flag.NArg()>0{
 		source = flag.Args()[0]
+	}
+
+	if flag.NArg()>1 && flagdest == FLAG_DEST_DEFAULT{
+		flagdest = flag.Args()[1]
 	}
 }
 
