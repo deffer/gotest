@@ -102,13 +102,22 @@ func filterOrdered(filename string)  (matches bool, fileinfo AnyFileInfo){
 func withFilesInList(listfile string, filterFunc func(string) (bool, AnyFileInfo)) (listedFiles []AnyFileInfo, processed int) {
 	file, _ := os.Open(listfile)
 	scanner := bufio.NewScanner(file)
+	var result []AnyFileInfo = make([]AnyFileInfo, 0, 100)
+	var i int = 0
 	for scanner.Scan() {
 		s := scanner.Text()
 		if !strings.HasPrefix(s, "#"){    		
     		if !filepath.IsAbs(s){
     			s = joinpath(listfile, s)    			
     		}
-			fmt.Println(s)
+    		if matches, fileinfo := filterFunc(filepath.Base(s)); matches{
+    			fileinfo.path = filepath.Dir(s)
+    			fileinfo.numner = i
+    			fileinfo.newNumber = i + argfrom
+    			result = append(result, fileinfo)
+
+    		}
+			fmt.Println(fileinfo)
     	}
 	}
 
@@ -127,8 +136,8 @@ func withFilesInDir(folder string, filterFunc func(string) (bool, AnyFileInfo)) 
 		for _, a:=range dirlist {
 			if !a.IsDir() {				
 				if matches, fileinfo := filterFunc(a.Name()); matches{
-					result = append(result, fileinfo)
 					fileinfo.path = folder
+					result = append(result, fileinfo)					
 					fmt.Printf("Accepted %s\n",fileinfo.name)
 				}else{
 					ignoredNames = append(ignoredNames, a.Name())
