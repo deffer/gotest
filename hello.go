@@ -37,22 +37,8 @@ type AnyFileInfo struct {
 }
 
 func (fi AnyFileInfo) String() string {
-	return fmt.Sprintf("%s | %s%s | %v->%v (%s)", fi.path, fi.name, fi.ext, fi.number, fi.newNumber, fi.stem)
+	return fmt.Sprintf("%s%s%s %v->%v (%s)", fi.path, fi.name, fi.ext, fi.number, fi.newNumber, fi.stem)
 }
-
-// !17. track17.mp3
-// 07. Di-Rect - I Just Can't Stand.mp3
-// 07.Di-Rect - I Just Can't Stand.mp3
-// 10_Forever Gone.mp3
-// 10 Forever Gone.mp3
-// 11-Lady.mp3
-// 11 - Lady.mp3
-
-// Track  4.mp3
-// Track  5.mp3
-
-// Portal2-16-Hard_Sunshine.mp3
-// Portal2-17-I_Am_Different.mp3
 
 const ARG_DEST_DEFAULT = "./"
 
@@ -91,19 +77,39 @@ func filterNumbered(filename string) (matches bool, fileinfo AnyFileInfo) {
 }
 
 /**
-Accepts any file.
-Used for 'filtering' files listed in winamp playlist (or any other file list)
+
+Used for analyzing files listed in winamp playlist (or any other file list)
+
+// !17. track17.mp3
+// 07. Di-Rect - I Just Can't Stand.mp3
+// 07.Di-Rect - I Just Can't Stand.mp3
+// 10_Forever Gone.mp3
+// 10 Forever Gone.mp3
+// 11-Lady.mp3
+// 11 - Lady.mp3
+
+// Track  4.mp3
+// Track  5.mp3
+
+// Portal2-16-Hard_Sunshine.mp3
+// Portal2-17-I_Am_Different.mp3
 */
-func filterOrdered(filename string) (matches bool, fileinfo AnyFileInfo) {
+var musicFileRegex = regexp.MustCompile(`(\d+)[\.\s\-\_]+(.*)`)
+
+func analyzeListEntry(filename string) (matches bool, fileinfo AnyFileInfo) {
 	matches = true
 	fileinfo = AnyFileInfo{}
 	fileinfo.path, fileinfo.name = filepath.Split(filename)
 	fileinfo.ext = filepath.Ext(fileinfo.name)
 	fileinfo.name = fileinfo.name[:len(fileinfo.name)-len(fileinfo.ext)]
+	var groups []string = musicFileRegex.FindStringSubmatch(fileinfo.name)
+	if len(groups) > 0 {
+		fileinfo.stem = groups[2]
+	}
 	return
 }
 
-func withFilesInList(listfile string, filterFunc func(string) (bool, AnyFileInfo)) (listedFiles []AnyFileInfo, processed int) {
+func withFilesInList(listfile string, analyzeFunc func(string) (bool, AnyFileInfo)) (listedFiles []AnyFileInfo, processed int) {
 	file, _ := os.Open(listfile)
 	scanner := bufio.NewScanner(file)
 	var result []AnyFileInfo = make([]AnyFileInfo, 0, 100)
@@ -114,7 +120,7 @@ func withFilesInList(listfile string, filterFunc func(string) (bool, AnyFileInfo
 			if !filepath.IsAbs(s) {
 				s = joinpath(listfile, s)
 			}
-			if matches, fileinfo := filterFunc(s); matches {
+			if matches, fileinfo := analyzeFunc(s); matches {
 				fileinfo.number = i
 				fileinfo.newNumber = i + argfrom
 				result = append(result, fileinfo)
@@ -184,7 +190,7 @@ func main() {
 		withFilesInDir(argsource, filterNumbered)
 	} else {
 		fmt.Printf("Opening file %s, setting temp folder to %s\n", argsource, filepath.Dir(argsource))
-		listedFiles, processed := withFilesInList(argsource, filterOrdered)
+		listedFiles, processed := withFilesInList(argsource, analyzeListEntry)
 		fmt.Printf("Total %v(%v)\n", len(listedFiles), processed)
 	}
 
