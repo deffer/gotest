@@ -1,19 +1,18 @@
 package main
 
 import (
-	"fmt"
-	"log"	
-	"os"
-	"io/ioutil"
 	"bufio"
-	"runtime"
+	_ "container/list"
 	"flag"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"os"
 	"path/filepath"
-	"strings"
 	"regexp"
-	_ "container/list"	
+	"runtime"
+	"strings"
 )
-
 
 type NumberedFileInfo interface {
 	Name() string
@@ -26,7 +25,7 @@ type AnyFileInfo struct {
 	// these identifies file on a disk
 	path string
 	name string
-	ext string
+	ext  string
 
 	// initial position of a file in a list
 	number int
@@ -35,6 +34,10 @@ type AnyFileInfo struct {
 
 	// file name without any numbering.
 	stem string
+}
+
+func (fi AnyFileInfo) String() string {
+	return fmt.Sprintf("%s | %s%s | %v->%v (%s)", fi.path, fi.name, fi.ext, fi.number, fi.newNumber, fi.stem)
 }
 
 // !17. track17.mp3
@@ -51,39 +54,37 @@ type AnyFileInfo struct {
 // Portal2-16-Hard_Sunshine.mp3
 // Portal2-17-I_Am_Different.mp3
 
-const FLAG_DEST_DEFAULT = "./"
+const ARG_DEST_DEFAULT = "./"
+
 var numberedFileRegex = regexp.MustCompile(`(.*?)(\d+)\.([^\.]+)`)
 var argfrom int // when ordering desctination files, start numbering them with this
-var argdest string
+var argdest = ARG_DEST_DEFAULT
 var argsource string = "c:/dev/docs/idcards"
 
 func init() {
-	
+
 	flag.IntVar(&argfrom, "from", 0, "Start enumeration from this number")
-	flag.StringVar(&flagdest, "dest", FLAG_DEST_DEFAULT, "Destination foler")
 	flag.Bool("emulate", false, "Do not make any file system changes")
 	flag.Parse()
-	
-	fmt.Printf("Command is %s, args are %s\n", flagcmd, flag.Args())
-	if flag.NArg()>0{
-		source = flag.Args()[0]
+
+	if flag.NArg() > 0 {
+		argsource = flag.Args()[0]
 	}
 
-	if flag.NArg()>1 && flagdest == FLAG_DEST_DEFAULT{
-		flagdest = flag.Args()[1]
+	if flag.NArg() > 1 {
+		argdest = flag.Args()[1]
 	}
 }
-
 
 /**
 Filters file from a folder. Reject files that dont end with number.
 Used for filtering photoes or music in a folder.
 */
-func filterNumbered(filename string) (matches bool, fileinfo AnyFileInfo){
-	if numberedFileRegex.MatchString(filename){
+func filterNumbered(filename string) (matches bool, fileinfo AnyFileInfo) {
+	if numberedFileRegex.MatchString(filename) {
 		matches = true
-		fileinfo = AnyFileInfo{name: filename}		
-	}else{
+		fileinfo = AnyFileInfo{name: filename}
+	} else {
 		matches = false
 	}
 	return
@@ -93,9 +94,12 @@ func filterNumbered(filename string) (matches bool, fileinfo AnyFileInfo){
 Accepts any file.
 Used for 'filtering' files listed in winamp playlist (or any other file list)
 */
-func filterOrdered(filename string)  (matches bool, fileinfo AnyFileInfo){
+func filterOrdered(filename string) (matches bool, fileinfo AnyFileInfo) {
 	matches = true
-	fileinfo = AnyFileInfo{name: filename}
+	fileinfo = AnyFileInfo{}
+	fileinfo.path, fileinfo.name = filepath.Split(filename)
+	fileinfo.ext = filepath.Ext(fileinfo.name)
+	fileinfo.name = fileinfo.name[:len(fileinfo.name)-len(fileinfo.ext)]
 	return
 }
 
@@ -106,83 +110,83 @@ func withFilesInList(listfile string, filterFunc func(string) (bool, AnyFileInfo
 	var i int = 0
 	for scanner.Scan() {
 		s := scanner.Text()
-		if !strings.HasPrefix(s, "#"){    		
-    		if !filepath.IsAbs(s){
-    			s = joinpath(listfile, s)    			
-    		}
-    		if matches, fileinfo := filterFunc(filepath.Base(s)); matches{
-    			fileinfo.path = filepath.Dir(s)
-    			fileinfo.numner = i
-    			fileinfo.newNumber = i + argfrom
-    			result = append(result, fileinfo)
-
-    		}
-			fmt.Println(fileinfo)
-    	}
+		if !strings.HasPrefix(s, "#") {
+			if !filepath.IsAbs(s) {
+				s = joinpath(listfile, s)
+			}
+			if matches, fileinfo := filterFunc(s); matches {
+				fileinfo.number = i
+				fileinfo.newNumber = i + argfrom
+				result = append(result, fileinfo)
+				i++
+				fmt.Println(fileinfo)
+			}
+		}
 	}
 
 	if err := scanner.Err(); err != nil {
-    	log.Fatal(err)
+		log.Fatal(err)
+		return nil, 0
 	}
-	return nil, 0
+	return result, i
 }
 
-func withFilesInDir(folder string, filterFunc func(string) (bool, AnyFileInfo)) (filesInDir []AnyFileInfo, processed int) {	
+func withFilesInDir(folder string, filterFunc func(string) (bool, AnyFileInfo)) (filesInDir []AnyFileInfo, processed int) {
 	processed = 0
 	var folderNames []string = make([]string, 0, 100)
 	var ignoredNames []string = make([]string, 0, 100)
 	var result []AnyFileInfo = make([]AnyFileInfo, 0, 100)
-	if dirlist,error := ioutil.ReadDir(folder); error == nil{
-		for _, a:=range dirlist {
-			if !a.IsDir() {				
-				if matches, fileinfo := filterFunc(a.Name()); matches{
+	if dirlist, error := ioutil.ReadDir(folder); error == nil {
+		for _, a := range dirlist {
+			if !a.IsDir() {
+				if matches, fileinfo := filterFunc(a.Name()); matches {
 					fileinfo.path = folder
-					result = append(result, fileinfo)					
-					fmt.Printf("Accepted %s\n",fileinfo.name)
-				}else{
+					result = append(result, fileinfo)
+					fmt.Printf("Accepted %s\n", fileinfo.name)
+				} else {
 					ignoredNames = append(ignoredNames, a.Name())
 				}
-			}else{
+			} else {
 				folderNames = append(folderNames, a.Name())
 			}
 		}
-		
+
 		if len(folderNames) > 0 {
 			fmt.Printf("Skipped FOLDERS: \n    %s\n", strings.Join(folderNames, "\n    "))
 			fmt.Printf("Ignored files: \n    %s\n", strings.Join(ignoredNames, "\n    "))
 		}
-	}else{
+	} else {
 		_, file, line, _ := runtime.Caller(1)
 		log.Printf("Error at %s: %d", file, line)
 		log.Fatalf("Unable to read %s:\n %v \nDetails:\n %#v", folder, error, error)
 		//fmt.Printf("Unable to read %s, error code %s", folder, error.Error())
-	}	
+	}
 	return result, len(result)
-	
+
 }
 
-
 func joinpath(source, target string) string {
-    if filepath.IsAbs(target) {
-        return target
-    }
-    return filepath.Join(filepath.Dir(source), target)
+	if filepath.IsAbs(target) {
+		return target
+	}
+	return filepath.Join(filepath.Dir(source), target)
 }
 
 func main() {
-	fmt.Printf("Starting...\n")	
-	finfo, err := os.Stat(source)
+	fmt.Printf("Starting...\n")
+	finfo, err := os.Stat(argsource)
 	if err != nil { // no such file or dir
-		log.Fatalf("File or folder %s does not exist: %v", source, err)
-    	return
+		log.Fatalf("File or folder %s does not exist: %v", argsource, err)
+		return
 	}
 
 	if finfo.IsDir() {
-    	withFilesInDir(source, filterNumbered)    	
+		withFilesInDir(argsource, filterNumbered)
 	} else {
-		fmt.Printf("Opening file %s, setting temp folder to %s\n", source, filepath.Dir(source))
-    	withFilesInList(source, filterOrdered)
+		fmt.Printf("Opening file %s, setting temp folder to %s\n", argsource, filepath.Dir(argsource))
+		listedFiles, processed := withFilesInList(argsource, filterOrdered)
+		fmt.Printf("Total %v(%v)\n", len(listedFiles), processed)
 	}
-	
+
 	fmt.Printf("Finished!\n")
 }
