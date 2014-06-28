@@ -29,11 +29,15 @@ Althout it should be enough to set GOPATH, it may still complain about missing G
   
 Running
 --------
-Compiling and installing as program.
+Compiling and running
+
+    go run "g:\music\Albums\Lacuna Coil\list.m3u" ./
+
+Compiling and installing as program (This will install it as 'gotest' binary)
 
     go install github.com\deffer\gotest
     
-This will install it as 'gotest' binary. It is also possible to cd into gotest folder and
+It is also possible to cd into gotest folder and
 
     go install hello.go
     
