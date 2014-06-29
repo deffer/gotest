@@ -33,7 +33,7 @@ Compiling and running
 
     go run "g:\music\Albums\Lacuna Coil\list.m3u" ./
 
-Compiling and installing as program (This will install it as 'gotest' binary)
+Compiling and installing as program (this will install it as 'gotest' binary)
 
     go install github.com\deffer\gotest
     

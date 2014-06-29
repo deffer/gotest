@@ -94,7 +94,7 @@ Used for analyzing files listed in winamp playlist (or any other file list)
 // Portal2-16-Hard_Sunshine.mp3
 // Portal2-17-I_Am_Different.mp3
 */
-var musicFileRegex = regexp.MustCompile(`(\d+)[\.\s\-\_]+(.*)`)
+var musicFileRegex = regexp.MustCompile(`\s*(\d+)[\.\s\-\_]+(.*)`)
 
 func analyzeListEntry(filename string) (matches bool, fileinfo AnyFileInfo) {
 	matches = true
@@ -102,9 +102,13 @@ func analyzeListEntry(filename string) (matches bool, fileinfo AnyFileInfo) {
 	fileinfo.path, fileinfo.name = filepath.Split(filename)
 	fileinfo.ext = filepath.Ext(fileinfo.name)
 	fileinfo.name = fileinfo.name[:len(fileinfo.name)-len(fileinfo.ext)]
-	var groups []string = musicFileRegex.FindStringSubmatch(fileinfo.name)
-	if len(groups) > 0 {
-		fileinfo.stem = groups[2]
+	if strings.TrimSpace(fileinfo.name) == "" {
+		matches = false
+	} else {
+		var groups []string = musicFileRegex.FindStringSubmatch(fileinfo.name)
+		if len(groups) > 0 {
+			fileinfo.stem = groups[2]
+		}
 	}
 	return
 }
