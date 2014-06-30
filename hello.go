@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"sort"
 	"strings"
 )
 
@@ -40,9 +41,16 @@ func (fi AnyFileInfo) String() string {
 	return fmt.Sprintf("%s%s%s %v->%v (%s)", fi.path, fi.name, fi.ext, fi.number, fi.newNumber, fi.stem)
 }
 
+// for sorting
+type ByNumber []AnyFileInfo
+
+func (b ByNumber) Len() int           { return len(b) }
+func (b ByNumber) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
+func (b ByNumber) Less(i, j int) bool { return b[i].number < b[j].number }
+
 const ARG_DEST_DEFAULT = "./"
 
-var numberedFileRegex = regexp.MustCompile(`(.*?)(\d+)\.([^\.]+)`)
+var numberedFileRegex = regexp.MustCompile(`(.*?)[\.\s\-\_]+(\d+)$`)
 var argfrom int // when ordering desctination files, start numbering them with this
 var argdest = ARG_DEST_DEFAULT
 var argsource string = "c:/dev/docs/idcards"
@@ -77,22 +85,7 @@ func filterNumbered(filename string) (matches bool, fileinfo AnyFileInfo) {
 }
 
 /**
-
 Used for analyzing files listed in winamp playlist (or any other file list)
-
-// !17. track17.mp3
-// 07. Di-Rect - I Just Can't Stand.mp3
-// 07.Di-Rect - I Just Can't Stand.mp3
-// 10_Forever Gone.mp3
-// 10 Forever Gone.mp3
-// 11-Lady.mp3
-// 11 - Lady.mp3
-
-// Track  4.mp3
-// Track  5.mp3
-
-// Portal2-16-Hard_Sunshine.mp3
-// Portal2-17-I_Am_Different.mp3
 */
 var musicFileRegex = regexp.MustCompile(`\s*(\d+)[\.\s\-\_]+(.*)`)
 
@@ -108,6 +101,13 @@ func analyzeListEntry(filename string) (matches bool, fileinfo AnyFileInfo) {
 		var groups []string = musicFileRegex.FindStringSubmatch(fileinfo.name)
 		if len(groups) > 0 {
 			fileinfo.stem = groups[2]
+		} else {
+			groups = numberedFileRegex.FindStringSubmatch(fileinfo.name)
+			if len(groups) > 0 {
+				fileinfo.stem = groups[1]
+			} else {
+				fileinfo.stem = fileinfo.name
+			}
 		}
 	}
 	return
@@ -189,14 +189,21 @@ func main() {
 		log.Fatalf("File or folder %s does not exist: %v", argsource, err)
 		return
 	}
-
+	var listedFiles []AnyFileInfo
+	var processed int
 	if finfo.IsDir() {
 		withFilesInDir(argsource, filterNumbered)
 	} else {
-		fmt.Printf("Opening file %s, setting temp folder to %s\n", argsource, filepath.Dir(argsource))
-		listedFiles, processed := withFilesInList(argsource, analyzeListEntry)
+		fmt.Printf("Opening file %s, setting source folder to %s\n", argsource, filepath.Dir(argsource))
+		listedFiles, processed = withFilesInList(argsource, analyzeListEntry)
 		fmt.Printf("Total %v(%v)\n", len(listedFiles), processed)
 	}
+
+	sort.Sort(ByNumber(listedFiles))
+
+	/*for lf := range listedFiles {
+		fmt.Println(listedFiles[lf].number)
+	}*/
 
 	fmt.Printf("Finished!\n")
 }

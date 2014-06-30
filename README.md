@@ -31,7 +31,7 @@ Running
 --------
 Compiling and running
 
-    go run "g:\music\Albums\Lacuna Coil\list.m3u" ./
+    go run hello.go "g:\music\Albums\Lacuna Coil\list.m3u" ./
 
 Compiling and installing as program (this will install it as 'gotest' binary)
 

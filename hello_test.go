@@ -33,6 +33,12 @@ func Test(t *testing.T) {
 		{"11-Lady.mp3", "Lady", true},
 		{"11 - Lady.mp3", "Lady", true},
 		{"11 - Smith's son", "Smith's son", true},
+		{"Smith's son", "Smith's son", true},
+		{"Track 4.mp3", "Track", true},
+		{"Track  010.mp3", "Track", true},
+		{"Track-10", "Track", true},
+		{"Photo_5", "Photo", true},
+		{"Photo_16.jpg", "Photo", true},
 		{".git", "", false},
 	}
 
