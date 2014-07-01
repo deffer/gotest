@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -41,6 +42,10 @@ func (fi AnyFileInfo) String() string {
 	return fmt.Sprintf("%s%s%s %v->%v (%s)", fi.path, fi.name, fi.ext, fi.number, fi.newNumber, fi.stem)
 }
 
+func (fi AnyFileInfo) NewFileName(precision int) string {
+	return fmt.Sprintf("%0"+strconv.Itoa(precision)+"d %s%s", fi.newNumber, fi.stem, fi.ext)
+}
+
 // for sorting
 type ByNumber []AnyFileInfo
 
@@ -50,7 +55,6 @@ func (b ByNumber) Less(i, j int) bool { return b[i].number < b[j].number }
 
 const ARG_DEST_DEFAULT = "./"
 
-var numberedFileRegex = regexp.MustCompile(`(.*?)[\.\s\-\_]+(\d+)$`)
 var argfrom int // when ordering desctination files, start numbering them with this
 var argdest = ARG_DEST_DEFAULT
 var argsource string = "c:/dev/docs/idcards"
@@ -69,6 +73,8 @@ func init() {
 		argdest = flag.Args()[1]
 	}
 }
+
+var numberedFileRegex = regexp.MustCompile(`(.*?)[\.\s\-\_]+(\d+)$`)
 
 /**
 Filters file from a folder. Reject files that dont end with number.
@@ -118,11 +124,12 @@ func withFilesInList(listfile string, analyzeFunc func(string) (bool, AnyFileInf
 	scanner := bufio.NewScanner(file)
 	var result []AnyFileInfo = make([]AnyFileInfo, 0, 100)
 	var i int = 0
+	listFileParentFolder := filepath.Dir(listfile)
 	for scanner.Scan() {
 		s := scanner.Text()
 		if !strings.HasPrefix(s, "#") {
 			if !filepath.IsAbs(s) {
-				s = joinpath(listfile, s)
+				s = joinpath(listFileParentFolder, s)
 			}
 			if matches, fileinfo := analyzeFunc(s); matches {
 				fileinfo.number = i
@@ -179,31 +186,52 @@ func joinpath(source, target string) string {
 	if filepath.IsAbs(target) {
 		return target
 	}
-	return filepath.Join(filepath.Dir(source), target)
+	return filepath.Join(source, target)
 }
 
-func main() {
+func mainRoutine() {
 	fmt.Printf("Starting...\n")
 	finfo, err := os.Stat(argsource)
 	if err != nil { // no such file or dir
 		log.Fatalf("File or folder %s does not exist: %v", argsource, err)
 		return
 	}
+
+	fdest, err := os.Stat(argdest)
+	if err != nil || !fdest.IsDir() {
+		log.Fatalf("%s does not exist or is not a folder: %v", argdest, err)
+		return
+	}
+
 	var listedFiles []AnyFileInfo
 	var processed int
 	if finfo.IsDir() {
-		withFilesInDir(argsource, filterNumbered)
+		listedFiles, processed = doDir(argsource)
 	} else {
-		fmt.Printf("Opening file %s, setting source folder to %s\n", argsource, filepath.Dir(argsource))
-		listedFiles, processed = withFilesInList(argsource, analyzeListEntry)
-		fmt.Printf("Total %v(%v)\n", len(listedFiles), processed)
+		listedFiles, processed = doList(argsource)
 	}
 
 	sort.Sort(ByNumber(listedFiles))
 
-	/*for lf := range listedFiles {
-		fmt.Println(listedFiles[lf].number)
-	}*/
+	for lf := range listedFiles {
+		fmt.Println(joinpath(argdest, listedFiles[lf].NewFileName(2)))
+	}
 
-	fmt.Printf("Finished!\n")
+	fmt.Printf("Destination folder is set to %s\n", filepath.Dir(argdest))
+	fmt.Printf("Finished! %v files processed \n", processed)
+}
+
+func doDir(source string) (filesInDir []AnyFileInfo, processed int) {
+	return withFilesInDir(source, filterNumbered)
+}
+
+func doList(source string) (filesInDir []AnyFileInfo, processed int) {
+	fmt.Printf("Opening file %s, setting source folder to %s\n", source, filepath.Dir(source))
+	listedFiles, processed := withFilesInList(source, analyzeListEntry)
+	fmt.Printf("Total %v(%v)\n", len(listedFiles), processed)
+	return listedFiles, processed
+}
+
+func main() {
+	mainRoutine()
 }
