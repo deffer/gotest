@@ -58,11 +58,12 @@ const ARG_DEST_DEFAULT = "./"
 var argfrom int // when ordering desctination files, start numbering them with this
 var argdest = ARG_DEST_DEFAULT
 var argsource string = "c:/dev/docs/idcards"
+var dryrun bool = false
 
 func init() {
 
 	flag.IntVar(&argfrom, "from", 0, "Start enumeration from this number")
-	flag.Bool("emulate", false, "Do not make any file system changes")
+	flag.BoolVar(&dryrun, "dryrun", false, "Do not make any file system changes")
 	flag.Parse()
 
 	if flag.NArg() > 0 {
@@ -95,6 +96,10 @@ Used for analyzing files listed in winamp playlist (or any other file list)
 */
 var musicFileRegex = regexp.MustCompile(`\s*(\d+)[\.\s\-\_]+(.*)`)
 
+/**
+Takes the full path to a file and splits it into path,name,ext
+Then name is further analyzed to detect if there is a number and remove it
+*/
 func analyzeListEntry(filename string) (matches bool, fileinfo AnyFileInfo) {
 	matches = true
 	fileinfo = AnyFileInfo{}
@@ -119,7 +124,7 @@ func analyzeListEntry(filename string) (matches bool, fileinfo AnyFileInfo) {
 	return
 }
 
-func withFilesInList(listfile string, analyzeFunc func(string) (bool, AnyFileInfo)) (listedFiles []AnyFileInfo, processed int) {
+func analyzeFilesInList(listfile string) (listedFiles []AnyFileInfo, processed int) {
 	file, _ := os.Open(listfile)
 	scanner := bufio.NewScanner(file)
 	var result []AnyFileInfo = make([]AnyFileInfo, 0, 100)
@@ -131,7 +136,7 @@ func withFilesInList(listfile string, analyzeFunc func(string) (bool, AnyFileInf
 			if !filepath.IsAbs(s) {
 				s = joinpath(listFileParentFolder, s)
 			}
-			if matches, fileinfo := analyzeFunc(s); matches {
+			if matches, fileinfo := analyzeListEntry(s); matches {
 				fileinfo.number = i
 				fileinfo.newNumber = i + argfrom
 				result = append(result, fileinfo)
@@ -148,7 +153,7 @@ func withFilesInList(listfile string, analyzeFunc func(string) (bool, AnyFileInf
 	return result, i
 }
 
-func withFilesInDir(folder string, filterFunc func(string) (bool, AnyFileInfo)) (filesInDir []AnyFileInfo, processed int) {
+func analyzeFilesInDir(folder string, filterFunc func(string) (bool, AnyFileInfo)) (filesInDir []AnyFileInfo, processed int) {
 	processed = 0
 	var folderNames []string = make([]string, 0, 100)
 	var ignoredNames []string = make([]string, 0, 100)
@@ -222,12 +227,12 @@ func mainRoutine() {
 }
 
 func doDir(source string) (filesInDir []AnyFileInfo, processed int) {
-	return withFilesInDir(source, filterNumbered)
+	return analyzeFilesInDir(source, filterNumbered)
 }
 
 func doList(source string) (filesInDir []AnyFileInfo, processed int) {
 	fmt.Printf("Opening file %s, setting source folder to %s\n", source, filepath.Dir(source))
-	listedFiles, processed := withFilesInList(source, analyzeListEntry)
+	listedFiles, processed := analyzeFilesInList(source)
 	fmt.Printf("Total %v(%v)\n", len(listedFiles), processed)
 	return listedFiles, processed
 }

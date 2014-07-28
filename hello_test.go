@@ -19,7 +19,7 @@ import (
 // Portal2-16-Hard_Sunshine.mp3
 // Portal2-17-I_Am_Different.mp3
 */
-func Test(t *testing.T) {
+func TestAnalyzeListEntry(t *testing.T) {
 
 	var tests = []struct {
 		s, want string
